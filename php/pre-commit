@@ -1,0 +1,34 @@
+#!/usr/bin/php
+<?php
+$files = explode("\n", shell_exec("git diff --name-only --staged '*.php' '*.phtml'"));
+$filesRegexp = '/^\+\+\+ b\/(.*)$\n(.*(\n))*^\\ No newline at end of file/m';
+$dieRegexp = '/^\++( )*die( )*(\(.*\)( )*)*( )*;( )*$/m';
+$vardumpRegexp = '/^\++( )*var_dump( )*(\(.*\)( )*)+( )*;( )*$/m';
+$red = "\033[31m";
+$yellow = "\033[1;33m";
+$colorend = "\033[0m";
+$hasWarnings = false;
+foreach ($files as $filename) {
+	if (empty($filename)) {
+		continue;
+	}
+	$fileDiff = shell_exec("git diff --staged {$filname}");
+	$msg = "";
+	if (preg_match($dieRegexp, $fileDiff)) {
+		$msg .= " - {$red}Warning :{$colorend} Matching {$red}die{$colorend} function calls\n";
+	}
+	if (preg_match($vardumpRegexp, $fileDiff)) {
+		$msg .= " - {$red}Warning :{$colorend} Matching {$red}var_dump{$colorend} function calls\n";
+	}
+	if ($msg != "") {
+		$hasWarnings = true;
+		$msg = "\n{$yellow}{$filename}{$colorend} :\n" . $msg;
+		echo $msg;
+	}
+}
+
+if ($hasWarnings) {
+	echo "\n{$red}Warnings has been detected, Aborting commit..{$colorend}";
+	echo "\nUse {$yellow}-n{$colorend} option to baypass this control.\n\n";
+	exit(1);
+}
